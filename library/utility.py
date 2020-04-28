@@ -190,16 +190,18 @@ class IQHelper:
 
     @staticmethod
     def save_to_vw(data, filename, sample_rate):
+        import time
         data = np.array(data)
         data = data / np.max(np.abs(data))
         rms = np.sqrt(np.mean(np.abs(data))) / np.max(np.abs(data))
         with open(filename, 'wb') as fp:
             fp.write(bytes('{TYPE: SMU-WV, 0}', encoding='ansi'))
+            fp.write(bytes('{DATE:%s}' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())), encoding='ansi'))
             s = '{LEVEL OFFS: %f,0}' % (20*np.log10(1.0/rms))
             fp.write(bytes(s, encoding='ansi'))
             fp.write(bytes('{CLOCK: %f}' % sample_rate, encoding='ansi'))
             fp.write(bytes('{SAMPLES: %d}' % len(data), encoding='ansi'))
-            fp.write(bytes('{WAVEFORM-%d: #' % (len(data) * 4 + 3), encoding='ansi'))
+            fp.write(bytes('{WAVEFORM-%d: #' % (len(data) * 4 + 1), encoding='ansi'))
             for d in data:
                 fp.write(struct.pack('hh', int(d.real*32767), int(d.imag*32767)))
             fp.write(bytes('}', encoding='ansi'))

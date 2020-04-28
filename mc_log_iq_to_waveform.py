@@ -6,12 +6,16 @@ import os.path
 def is_seg_start(l):
     r = l.split('):')
     if len(r) == 2:
+        if r[1].find('sampleRate ') != -1:
+            r = r[1].strip().split(' ')
+            return None, int(r[1]) * 1000
+
         if r[1].find(', IQ from No') != -1:
             "Seg 0, IQ from No.0 ms, len 1 ms:"
             r = r[1].split(',')
-            return r[0]
+            return r[0], None
 
-    return None
+    return None, None
 
 
 def get_one_line_iq_data(l):
@@ -33,13 +37,14 @@ def get_one_line_iq_data(l):
 
 
 if __name__ == '__main__':
-    filename = './PPC_10.3.19.200_20200427_171738_out.txt'
+    filename = './PPC_10.3.19.200_20200428_192442_out.txt'
     if len(sys.argv) > 1:
         filename = sys.argv[1]
 
     with open(filename, 'r') as fp:
         found_start = False
         full_iq = list()
+        sample_rate = 1e6
         count = 1
         while True:
             line = fp.readline()
@@ -49,8 +54,8 @@ if __name__ == '__main__':
             if found_start is True:
                 seq, iq = get_one_line_iq_data(line)
                 if seq == -1:
-                    IQHelper.save_to_89600_csv(full_iq, '%s/%s-%s-%d.csv' % (os.path.dirname(filename), os.path.basename(filename), segName, count), 122.88e6)
-                    IQHelper.save_to_vw(full_iq, '%s/%s-%s-%d.wv' % (os.path.dirname(filename), os.path.basename(filename), segName, count), 122.88e6)
+                    IQHelper.save_to_89600_csv(full_iq, '%s/%s-%s-%d.csv' % (os.path.dirname(filename), os.path.basename(filename), segName, count), sample_rate)
+                    IQHelper.save_to_vw(full_iq, '%s/%s-%s-%d.wv' % (os.path.dirname(filename), os.path.basename(filename), segName, count), sample_rate)
                     found_start = False
                     count += 1
                     full_iq = list()
@@ -58,7 +63,10 @@ if __name__ == '__main__':
                     full_iq.extend(iq)
 
             else:
-                segName = is_seg_start(line)
+                segName, sr = is_seg_start(line)
+                if sr is not None:
+                    sample_rate = sr
+
                 if segName is not None:
                     print(segName)
                     found_start = True
